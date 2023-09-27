@@ -1,0 +1,2 @@
+class ConfigHelper:
+    pass
