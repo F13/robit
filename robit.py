@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from helpers import AIHelper, AudioHelper
+import tempfile, os
 
 chatbot = AIHelper.ChatHelper()
 
@@ -14,9 +15,17 @@ def process_audio(file):
     print(bot_message)
     wav = AIHelper.TTSHelper().text_to_wav(bot_message, {"lengthScale":"0.75"})
     AudioHelper.AudioHelper().say(wav)
-try:
-    if __name__ == "__main__":
-        while True:
-            process_audio(AudioHelper.AudioHelper().listen())
-except KeyboardInterrupt:
-    print(f"Full history log: {chatbot.history}")
+
+if __name__ == "__main__":
+    while True:
+        try:
+            tf = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
+            AudioHelper.AudioHelper(dst_filename=tf.name).listen()
+            process_audio(tf.name)
+            tf.close()
+        except KeyboardInterrupt:
+            print("\nGenerating summary...")
+            print(f"\nSummary:\n{chatbot.create_summary()}")
+            quit()
+        finally:
+            os.remove(tf.name)

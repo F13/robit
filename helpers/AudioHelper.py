@@ -33,7 +33,9 @@ class AudioHelper:
 
         return rms * 1000
 
-    def __init__(self):
+    def __init__(self, src_filename=None, dst_filename=None):
+        self.src_filename=src_filename
+        self.dst_filename=dst_filename
         self.p = pyaudio.PyAudio()
         self.stream = self.p.open(format=FORMAT,
                                   channels=CHANNELS,
@@ -56,28 +58,25 @@ class AudioHelper:
 
             current = time.time()
             rec.append(data)
-        return self.write(b''.join(rec))
+        self.write(b''.join(rec))
 
-    def write(self, recording, filename=None):
-        if filename:
-            file = os.path.abspath(file)
-        else:
-            file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
-
-        with wave.open(file, 'wb') as wf:
+    def write(self, recording):
+        with wave.open(self.dst_filename, 'wb') as wf:
             wf.setnchannels(CHANNELS)
             wf.setsampwidth(self.p.get_sample_size(FORMAT))
             wf.setframerate(RATE)
             wf.writeframes(recording)
-
-        return file
     
-    def listen(self):
+    def listen(self, dst_file=None):
+        if dst_file:
+            self.dst_filename = dst_file
         while self.rms(self.stream.read(chunk)) <= Threshold:
             pass
-        return self.record()
+        self.record()
 
     def say(self, audio):
+        if not audio:
+            audio = self.src_file
         with wave.open(audio) as wav:
             stream = self.p.open(format = self.p.get_format_from_width(wav.getsampwidth()),
                             channels = wav.getnchannels(),

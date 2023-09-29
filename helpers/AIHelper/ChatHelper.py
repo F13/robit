@@ -47,3 +47,9 @@ class ChatHelper:
                     num_tokens += 1
         num_tokens += 3  # every reply is primed with <|start|>assistant<|message|>
         return num_tokens + self.max_response_tokens
+    
+    def create_summary(self):
+        summary_prompt = "Please summarize this conversation in three sentences or less.\
+                          Be sure to include important personal details or memories we shared.\
+                          This summary will be your only memory of our conversation in the future."
+        return self.get_robit_message(self.history + [{"role":"user", "content":summary_prompt}])
