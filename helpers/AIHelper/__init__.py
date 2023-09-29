@@ -2,11 +2,11 @@ import openai, os, time
 from . import ChatHelper, TranscriptionHelper, TTSHelper
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
-tts_endpoint = "http://192.168.1.50:59125/api/tts"
+tts_endpoint = "http://localhost:59125/api/tts"
 rate_limit_wait = 5
 
 class AIHelper:
-    def __init__(self):
+    def __init__(self, tts_endpoint=tts_endpoint):
         self.ChatHelper = ChatHelper.ChatHelper()
         self.TranscriptionHelper = TranscriptionHelper.TranscriptionHelper()
         self.TTSHelper = TTSHelper.TTSHelper(endpoint=tts_endpoint)
