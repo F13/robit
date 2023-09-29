@@ -51,5 +51,5 @@ class ChatHelper:
     def create_summary(self):
         summary_prompt = "Please summarize this conversation in three sentences or less.\
                           Be sure to include important personal details or memories we shared.\
-                          This summary will be your only memory of our conversation in the future."
+                          This summary will be used to remind the robot of this conversation in the future."
         return self.get_robit_message(self.history + [{"role":"user", "content":summary_prompt}])

@@ -3,17 +3,17 @@
 from helpers import AIHelper, AudioHelper
 import tempfile, os
 
-chatbot = AIHelper.ChatHelper()
+ai = AIHelper.AIHelper()
 
 # audio.listen()
 # user_message = AIHelper.TranscriptionHelper().transcribe("/tmp/audio/2.wav")
 
 def process_audio(file):
-    user_message = AIHelper.TranscriptionHelper().transcribe(file)
+    user_message = ai.transcribe(file)
     print(user_message)
-    bot_message = chatbot.chat(user_message)
+    bot_message = ai.chat(user_message)
     print(bot_message)
-    wav = AIHelper.TTSHelper().text_to_wav(bot_message, {"lengthScale":"0.75"})
+    wav = ai.text_to_wav(bot_message, {"lengthScale":"0.75"})
     AudioHelper.AudioHelper().say(wav)
 
 if __name__ == "__main__":
@@ -25,7 +25,7 @@ if __name__ == "__main__":
             tf.close()
         except KeyboardInterrupt:
             print("\nGenerating summary...")
-            print(f"\nSummary:\n{chatbot.create_summary()}")
+            print(f"\nSummary:\n{ai.create_summary()}")
             quit()
         finally:
             os.remove(tf.name)
