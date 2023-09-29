@@ -1,5 +1,10 @@
-import openai, json
+import openai, os
 
 class TranscriptionHelper:
     def transcribe(self, file):
-        return openai.Audio.transcribe("whisper-1", file, language="en").text
+        try:
+            with open(file.name, "rb") as fopen:
+                text_result = openai.Audio.transcribe("whisper-1", fopen, language="en").text
+        finally:
+            os.remove(file.name)
+        return text_result

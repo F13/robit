@@ -4,7 +4,7 @@ import struct
 import wave
 import time
 import os
-import io
+import tempfile
 
 Threshold = 10
 
@@ -49,9 +49,10 @@ class AudioHelper:
         end = time.time() + TIMEOUT_LENGTH
 
         while current <= end:
-
             data = self.stream.read(chunk)
-            if self.rms(data) >= Threshold: end = time.time() + TIMEOUT_LENGTH
+
+            if self.rms(data) >= Threshold:
+                end = time.time() + TIMEOUT_LENGTH
 
             current = time.time()
             rec.append(data)
@@ -61,8 +62,7 @@ class AudioHelper:
         if filename:
             file = os.path.abspath(file)
         else:
-            file = io.BytesIO()
-            file.name = "stream"
+            file = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
 
         with wave.open(file, 'wb') as wf:
             wf.setnchannels(CHANNELS)
@@ -70,18 +70,12 @@ class AudioHelper:
             wf.setframerate(RATE)
             wf.writeframes(recording)
 
-        if filename:
-            print(f"Wrote to {filename}")
-        else:
-            return file
-
-    def listen(self, executor, callback):
-        while True:
-            input = self.stream.read(chunk)
-            rms_val = self.rms(input)
-            if rms_val > Threshold:
-                future = executor.submit(self.record)
-                future.add_done_callback(callback)
+        return file
+    
+    def listen(self):
+        while self.rms(self.stream.read(chunk)) <= Threshold:
+            pass
+        return self.record()
 
     def say(self, audio):
         with wave.open(audio) as wav:
