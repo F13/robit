@@ -13,5 +13,5 @@ Proof-of-concept of a conversational robit using GPT, WhisperAI, and Mimic 3. In
     - `export OPENAI_API_KEY=foobar`
 3. Run `robit.py`.
     - `python robit.py` (or some other way. I don't know your life. Calm down.)
-      - You may want to pass in a different TTS endpoint for Mimic 3 when AIHelper is instantiated:
+      - You may want to pass in a different TTS endpoint for Mimic 3 when AIHelper is instantiated (in `robit.py`):
         - `ai = AIHelper.AIHelper(tts_endpoint="foo")`

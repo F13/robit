@@ -5,9 +5,6 @@ import tempfile, os
 
 ai = AIHelper.AIHelper()
 
-# audio.listen()
-# user_message = AIHelper.TranscriptionHelper().transcribe("/tmp/audio/2.wav")
-
 def process_audio(file):
     user_message = ai.transcribe(file)
     print(user_message)
