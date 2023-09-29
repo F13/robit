@@ -4,7 +4,7 @@ import struct
 import wave
 import time
 import os
-import pyttsx3
+import io
 
 Threshold = 10
 
@@ -16,8 +16,6 @@ RATE = 16000
 swidth = 2
 
 TIMEOUT_LENGTH = .8
-
-f_name_directory = "/tmp/audio/"
 
 class AudioHelper:
 
@@ -43,8 +41,7 @@ class AudioHelper:
                                   input=True,
                                   output=True,
                                   frames_per_buffer=chunk)
-        self.engine = pyttsx3.init()
-
+        
     def record(self):
         print('Noise detected, recording beginning')
         rec = []
@@ -58,30 +55,46 @@ class AudioHelper:
 
             current = time.time()
             rec.append(data)
-        self.write(b''.join(rec))
+        return self.write(b''.join(rec))
 
-    def write(self, recording):
-        n_files = len(os.listdir(f_name_directory))
+    def write(self, recording, filename=None):
+        if filename:
+            file = os.path.abspath(file)
+        else:
+            file = io.BytesIO()
+            file.name = "stream"
 
-        filename = os.path.join(f_name_directory, '{}.wav'.format(n_files))
+        with wave.open(file, 'wb') as wf:
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(self.p.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(recording)
 
-        wf = wave.open(filename, 'wb')
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(self.p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(recording)
-        wf.close()
-        print('Written to file: {}'.format(filename))
-        print('Returning to listening')
+        if filename:
+            print(f"Wrote to {filename}")
+        else:
+            return file
 
-    def listen(self):
-        print('Listening beginning')
+    def listen(self, executor, callback):
         while True:
             input = self.stream.read(chunk)
             rms_val = self.rms(input)
             if rms_val > Threshold:
-                self.record()
+                future = executor.submit(self.record)
+                future.add_done_callback(callback)
 
-    def say(self, message:str):
-        self.engine.say(message)
-        self.engine.runAndWait()
+    def say(self, audio):
+        with wave.open(audio) as wav:
+            stream = self.p.open(format = self.p.get_format_from_width(wav.getsampwidth()),
+                            channels = wav.getnchannels(),
+                            rate = wav.getframerate(),
+                            output = True)
+
+            data = wav.readframes(chunk)
+
+            while data:
+                stream.write(data)
+                data = wav.readframes(chunk)
+
+        stream.stop_stream()
+        stream.close()
