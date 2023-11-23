@@ -3,8 +3,8 @@ import math
 import struct
 import wave
 import time
-import os
-import tempfile
+from pydub import AudioSegment
+from pydub.playback import play
 
 Threshold = 10
 
@@ -15,7 +15,7 @@ CHANNELS = 1
 RATE = 16000
 swidth = 2
 
-TIMEOUT_LENGTH = .8
+TIMEOUT_LENGTH = .5
 
 class AudioHelper:
 
@@ -74,20 +74,24 @@ class AudioHelper:
             pass
         self.record()
 
-    def say(self, audio):
+    def say(self, audio, format):
         if not audio:
             audio = self.src_file
-        with wave.open(audio) as wav:
-            stream = self.p.open(format = self.p.get_format_from_width(wav.getsampwidth()),
-                            channels = wav.getnchannels(),
-                            rate = wav.getframerate(),
-                            output = True)
+        if format == "wav":
+            with wave.open(audio) as wav:
+                stream = self.p.open(format = self.p.get_format_from_width(wav.getsampwidth()),
+                                channels = wav.getnchannels(),
+                                rate = wav.getframerate(),
+                                output = True)
 
-            data = wav.readframes(chunk)
-
-            while data:
-                stream.write(data)
                 data = wav.readframes(chunk)
 
-        stream.stop_stream()
-        stream.close()
+                while data:
+                    stream.write(data)
+                    data = wav.readframes(chunk)
+
+            stream.stop_stream()
+            stream.close()
+        elif format == "mp3":
+            song = AudioSegment.from_mp3(audio)
+            play(song)

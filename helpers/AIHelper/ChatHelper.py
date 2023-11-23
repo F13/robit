@@ -1,24 +1,92 @@
-import openai, os, tiktoken
+import openai, os, tiktoken, abc, time
 
-class ChatHelper:
-    def __init__(self):
-        self.history = []
-        self.model = "gpt-3.5-turbo"
-        self.max_response_tokens = 15
-        
+class ChatHelper(abc.ABC):
+    @abc.abstractmethod
+    def chat(self):
+        raise NotImplementedError
+    
+    @abc.abstractmethod
+    def create_summary(self):
+        raise NotImplementedError
+    
+class OpenAI_BaseChatHelper(ChatHelper):
+    def __init__(self, client=None):
+        self.client = client
+        if not self.client:
+            self.client = openai.OpenAI()
+
+        self.model = "gpt-3.5-turbo-1106"
+
         with open(os.path.join(os.path.dirname(__file__), "config/prompts/system.txt"), "r") as fopen:
             self.system_prompt = fopen.read()
 
-        self.history.append({"role": "system", "content": self.system_prompt})
+        with open(os.path.join(os.path.dirname(__file__), "config/prompts/summary.txt"), "r") as fopen:
+            self.summary_prompt = fopen.read()  
+    
+class OpenAI_AssistantHelper(OpenAI_BaseChatHelper):
+    def __init__(self, client=None):
+        super().__init__(client)
+        assistants = [x for x in self.client.beta.assistants.list() if x.name == "Robit"]
 
-    def get_user_message(self):
-        return "Hello, robit!"
+        if len(assistants) == 0:
+            self.assistant = self.client.beta.assistants.create(
+                name="Robit",
+                instructions=self.system_prompt,
+                model=self.model
+            )
+
+        elif len(assistants) == 1:
+            self.assistant = assistants[0]
+        else:
+            # logger warn, multiple assistants
+            pass
+
+        self.done_states = ["cancelled", "failed", "completed", "expired"]
+        self.threads = []
+
+    def chat(self, message:str, run_instructions:str=None):
+        if len(self.threads) == 0:
+            self.threads.append(self.client.beta.threads.create())
+
+        thread = self.threads[0]
+
+        self.client.beta.threads.messages.create(
+            thread_id=thread.id,
+            role="user",
+            content=message
+        )
+
+        run = self.client.beta.threads.runs.create(
+            thread_id=thread.id,
+            assistant_id=self.assistant.id,
+            instructions=run_instructions
+        )
+
+        while run.status not in self.done_states:
+            time.sleep(1)
+            run = self.client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+        messages = self.client.beta.threads.messages.list(thread_id=thread.id).data
+        # TODO: Parse messages and return appropriate messages
+        return messages[0].content[0].text.value
+    
+    def create_summary(self):
+        return self.chat(message=self.summary_prompt, run_instructions="This user is an administrator. Provide what they ask to the best of your ability.")
+
+
+class OpenAI_ChatHelper(OpenAI_BaseChatHelper):
+    def __init__(self, client=None):
+        super().__init__(client)
+        self.history = []
+        self.max_response_tokens = 15
+
+        self.history.append({"role": "system", "content": self.system_prompt})
 
     def get_robit_message(self, messages:list):
         if not messages:
             messages = self.history
 
-        response = openai.ChatCompletion.create(
+        response = self.client.chat.completions.create(
             model=self.model,
             messages=messages,
             max_tokens=self.get_total_allowed_response_tokens(messages)
@@ -49,7 +117,4 @@ class ChatHelper:
         return num_tokens + self.max_response_tokens
     
     def create_summary(self):
-        summary_prompt = "Please summarize this conversation in three sentences or less.\
-                          Be sure to include important personal details or memories we shared.\
-                          This summary will be used to remind the robot of this conversation in the future."
-        return self.get_robit_message(self.history + [{"role":"user", "content":summary_prompt}])
+        return self.get_robit_message(self.history + [{"role":"user", "content":self.summary_prompt}])

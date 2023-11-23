@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 
 from helpers import AIHelper, AudioHelper
-import tempfile, os
+import tempfile, os, time, json
 
-ai = AIHelper.AIHelper(tts_endpoint="http://192.168.1.50:59125/api/tts")
+ai = AIHelper.AIHelper()
 
 def process_audio(file):
-    print("Transcription beginning...")
-    user_message = ai.transcribe(file)
+    timestats = {}
+    start = time.perf_counter()
+    with open(file, 'rb') as ofile:
+        user_message = ai.transcribe(ofile.read())
+        timestats['transcription'] = time.perf_counter() - start
     print(user_message)
-    print("Thinking...")
     bot_message = ai.chat(user_message)
+    timestats['chat'] = time.perf_counter() - (start + timestats['transcription'])
     print(bot_message)
-    print("Audioifying...")
-    wav = ai.text_to_wav(bot_message, {"lengthScale":"0.75"})
-    AudioHelper.AudioHelper().say(wav)
+    audio = ai.text_to_speech(bot_message)
+    timestats['tts'] = time.perf_counter() - (start + timestats['chat'] + timestats['transcription'])
+    timestats['total'] = time.perf_counter() - start
+    return audio, timestats
 
 if __name__ == "__main__":
     while True:
@@ -22,8 +26,13 @@ if __name__ == "__main__":
             tf = tempfile.NamedTemporaryFile(delete=False, suffix=".wav")
             print("Listening...")
             AudioHelper.AudioHelper(dst_filename=tf.name).listen()
-            process_audio(tf.name)
+            audio, timestats = process_audio(tf.name)
             tf.close()
+
+            print(json.dumps(timestats, indent=2))
+
+            AudioHelper.AudioHelper().say(audio, format="mp3")
+
         except KeyboardInterrupt:
             print("\nGenerating summary...")
             print(f"\nSummary:\n{ai.create_summary()}")

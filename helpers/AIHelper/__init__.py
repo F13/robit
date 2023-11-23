@@ -1,22 +1,25 @@
-import openai, os, time
+import openai, time
 from . import ChatHelper, TranscriptionHelper, TTSHelper
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
 tts_endpoint = "http://localhost:59125/api/tts"
-rate_limit_wait = 5
+transcription_endpoint = "http://localhost:4444/transcribe"
 
 class AIHelper:
-    def __init__(self, tts_endpoint=tts_endpoint):
-        self.ChatHelper = ChatHelper.ChatHelper()
-        self.TranscriptionHelper = TranscriptionHelper.TranscriptionHelper()
-        self.TTSHelper = TTSHelper.TTSHelper(endpoint=tts_endpoint)
+    def __init__(self, openai_client=None, tts_endpoint=tts_endpoint, transcription_endpoint=transcription_endpoint):
+        self.openai_client = openai_client
+        if not self.openai_client:
+            self.openai_client = openai.OpenAI()
+        
+        self.ChatHelper = ChatHelper.OpenAI_AssistantHelper(client=self.openai_client)
+        self.TranscriptionHelper = TranscriptionHelper.Custom_TranscriptionHelper(endpoint=transcription_endpoint)
+        self.TTSHelper = TTSHelper.OpenAI_TTSHelper(client=self.openai_client)
 
     def openai_wrapper(func):
         def wrap(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
-            except openai.error.RateLimitError:
-                end = time.time() + rate_limit_wait
+            except openai.RateLimitError:
+                end = time.time() + 10
                 while time.time() < end:
                     print(f"Rate limited ({int(end - time.time()) + 1}) ", end="\r")
                 print("\x1b[K", end="")
@@ -31,10 +34,9 @@ class AIHelper:
     def create_summary(self):
         return self.ChatHelper.create_summary()
 
-    @openai_wrapper
     def transcribe(self, filename:str):
         return self.TranscriptionHelper.transcribe(filename)
 
     @openai_wrapper
-    def text_to_wav(self, *args, **kwargs):
-        return self.TTSHelper.text_to_wav(*args, **kwargs)
+    def text_to_speech(self, *args, **kwargs):
+        return self.TTSHelper.text_to_speech(*args, **kwargs)

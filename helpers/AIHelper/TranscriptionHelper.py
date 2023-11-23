@@ -1,7 +1,17 @@
-import openai, os
+import requests, abc
 
-class TranscriptionHelper:
-    def transcribe(self, filename):
-        with open(filename, "rb") as fopen:
-            text_result = openai.Audio.transcribe("whisper-1", fopen, language="en").text
-        return text_result
+class TranscriptionHelper(abc.ABC):
+    @abc.abstractmethod
+    def transcribe(self):
+        raise NotImplementedError
+
+class Custom_TranscriptionHelper(TranscriptionHelper):
+    def __init__(self, endpoint):
+        self.endpoint = endpoint
+
+    def transcribe(self, data, args=None):
+        try:
+            response = requests.post(self.endpoint, data=data, params=args)
+        except requests.exceptions.ConnectionError:
+            return "There was an error"
+        return response.text
