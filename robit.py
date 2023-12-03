@@ -15,8 +15,6 @@ from helpers import AIHelper, AudioHelper
 
 class Robit():
     def __init__(self):
-        
-
         logging.basicConfig()
         self.logger = logging.getLogger("robit")
         self.logger.setLevel(os.getenv("ROBIT_LOG_LEVEL", "INFO").upper())

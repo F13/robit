@@ -17,6 +17,7 @@ class AIHelper:
         self.ChatHelper = ChatHelper.OpenAI_AssistantHelper(client=self.openai_client)
         self.TranscriptionHelper = TranscriptionHelper.Custom_TranscriptionHelper(endpoint=transcription_endpoint)
         self.TTSHelper = TTSHelper.OpenAI_TTSHelper(client=self.openai_client)
+        #self.TTSHelper = TTSHelper.Custom_TTSHelper(endpoint=tts_endpoint)
 
     def openai_wrapper(func):
         def wrap(*args, **kwargs):
