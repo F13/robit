@@ -1,8 +1,11 @@
-import pyaudio
+import ctypes
+import logging
 import math
 import struct
-import wave
 import time
+import wave
+
+import pyaudio
 from pydub import AudioSegment
 from pydub.playback import play
 
@@ -17,8 +20,21 @@ swidth = 2
 
 TIMEOUT_LENGTH = .5
 
-class AudioHelper:
+# Silence ALSA console messages...
+ERROR_HANDLER_FUNC = ctypes.CFUNCTYPE(None, ctypes.c_char_p, ctypes.c_int,
+                                      ctypes.c_char_p, ctypes.c_int,
+                                      ctypes.c_char_p)
+def py_error_handler(filename, line, function, err, fmt):
+    pass
+c_error_handler = ERROR_HANDLER_FUNC(py_error_handler)
+try:
+    asound = ctypes.cdll.LoadLibrary('libasound.so.2')
+    asound.snd_lib_error_set_handler(c_error_handler)
+except OSError:
+    pass
 
+
+class AudioHelper:
     @staticmethod
     def rms(frame):
         count = len(frame) / swidth
@@ -34,6 +50,8 @@ class AudioHelper:
         return rms * 1000
 
     def __init__(self, src_filename=None, dst_filename=None):
+        self.logger = logging.getLogger("robit.audiohelper")
+
         self.src_filename=src_filename
         self.dst_filename=dst_filename
         self.p = pyaudio.PyAudio()
@@ -45,7 +63,7 @@ class AudioHelper:
                                   frames_per_buffer=chunk)
         
     def record(self):
-        print('Noise detected, recording beginning')
+        self.logger.debug('Noise detected, recording beginning')
         rec = []
         current = time.time()
         end = time.time() + TIMEOUT_LENGTH
@@ -95,3 +113,6 @@ class AudioHelper:
         elif format == "mp3":
             song = AudioSegment.from_mp3(audio)
             play(song)
+
+    def get_soundbite(self, *args, **kwargs):
+        self.listen(*args, **kwargs)

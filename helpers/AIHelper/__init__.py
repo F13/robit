@@ -1,8 +1,12 @@
-import openai, time
+import os
+import time
+
+import openai
+
 from . import ChatHelper, TranscriptionHelper, TTSHelper
 
-tts_endpoint = "http://localhost:59125/api/tts"
-transcription_endpoint = "http://localhost:4444/transcribe"
+tts_endpoint = os.getenv("ROBIT_TTS_ENDPOINT", "http://localhost:59125/api/tts")
+transcription_endpoint = os.getenv("ROBIT_TRANSCRIPTION_ENDPOINT", "http://localhost:4444/transcribe")
 
 class AIHelper:
     def __init__(self, openai_client=None, tts_endpoint=tts_endpoint, transcription_endpoint=transcription_endpoint):

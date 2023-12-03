@@ -1,4 +1,7 @@
-import requests, abc
+import abc
+
+import requests
+
 
 class TranscriptionHelper(abc.ABC):
     @abc.abstractmethod
@@ -12,6 +15,9 @@ class Custom_TranscriptionHelper(TranscriptionHelper):
     def transcribe(self, data, args=None):
         try:
             response = requests.post(self.endpoint, data=data, params=args)
-        except requests.exceptions.ConnectionError:
-            return "There was an error"
+        except requests.exceptions.ConnectionError as e:
+            raise TranscriptionError(e)
         return response.text
+    
+class TranscriptionError(Exception):
+    pass

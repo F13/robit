@@ -1,4 +1,10 @@
-import openai, os, tiktoken, abc, time
+import abc
+import os
+import time
+
+import openai
+import tiktoken
+
 
 class ChatHelper(abc.ABC):
     @abc.abstractmethod
@@ -38,18 +44,19 @@ class OpenAI_AssistantHelper(OpenAI_BaseChatHelper):
         elif len(assistants) == 1:
             self.assistant = assistants[0]
         else:
-            # logger warn, multiple assistants
+            # TODO: logger warn, multiple assistants
             pass
 
+
+        # TODO: Logic for creating and managing new threads
+        self.thread = self.client.beta.threads.create()
+
+        # TODO: handle all states appropriately
         self.done_states = ["cancelled", "failed", "completed", "expired"]
-        self.threads = []
 
     def chat(self, message:str, run_instructions:str=None):
-        if len(self.threads) == 0:
-            self.threads.append(self.client.beta.threads.create())
-
-        thread = self.threads[0]
-
+        thread = self.thread
+            
         self.client.beta.threads.messages.create(
             thread_id=thread.id,
             role="user",
@@ -63,15 +70,23 @@ class OpenAI_AssistantHelper(OpenAI_BaseChatHelper):
         )
 
         while run.status not in self.done_states:
+            # TODO: Smarter wait logic
             time.sleep(1)
             run = self.client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
 
         messages = self.client.beta.threads.messages.list(thread_id=thread.id).data
-        # TODO: Parse messages and return appropriate messages
+        # TODO: Parse messages and return appropriate messages and/or convert to self.get_messages()
         return messages[0].content[0].text.value
     
     def create_summary(self):
         return self.chat(message=self.summary_prompt, run_instructions="This user is an administrator. Provide what they ask to the best of your ability.")
+    
+    def get_messages(self):
+        # TODO: Parse these a bit and make a more extensible object (to use in chat())
+        try:
+            return [x.content[0].text.value for x in self.client.beta.threads.messages.list(thread_id=self.thread.id).data]
+        except AttributeError:
+            return []
 
 
 class OpenAI_ChatHelper(OpenAI_BaseChatHelper):
